@@ -34,9 +34,9 @@
 
 (defn- add-tables [dbs]
   (let [db-id->tables (group-by :db_id (filter mi/can-read? (db/select Table
-                                                                  :active true
-                                                                  :db_id  [:in (map :id dbs)]
-                                                                  {:order-by [[:%lower.display_name :asc]]})))]
+                                                              :active true
+                                                              :db_id  [:in (map :id dbs)]
+                                                              {:order-by [[:%lower.display_name :asc]]})))]
     (for [db dbs]
       (assoc db :tables (get db-id->tables (:id db) [])))))
 
@@ -54,10 +54,12 @@
   (as-> (db/select [Card :name :description :database_id :dataset_query :id :collection_id]
           :result_metadata [:not= nil]
           {:order-by [[:%lower.name :asc]]}) <>
-    (filter (fn [{database-id :database_id, :as card}]
-              (and database-id
-                   (driver/driver-supports? (driver/database-id->driver database-id) :nested-queries)
-                   (mi/can-read? card)))
+    (filter (fn [{{database-id :database} :dataset_query, :as card}]
+              (let [driver (driver/database-id->driver database-id)]
+                (and database-id
+                     driver
+                     (driver/driver-supports? driver :nested-queries)
+                     (mi/can-read? card))))
             <>)
     (hydrate <> :collection)))
 

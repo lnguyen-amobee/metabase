@@ -228,7 +228,10 @@
   [query metadata checksum]
   (let [valid-metadata? (and (results-metadata/valid-checksum? metadata checksum)
                              (s/validate results-metadata/ResultsMetadata metadata))]
-    (log/info (str "Card results metadata passed in to API is " (if valid-metadata? "VALID. Thanks!" "INVALID. Running query to fetch correct metadata.")))
+    (log/info (str "Card results metadata passed in to API is " (cond
+                                                                  valid-metadata? "VALID. Thanks!"
+                                                                  metadata        "INVALID. Running query to fetch correct metadata."
+                                                                  :else           "MISSING. Running query to fetch correct metadata.")))
     (if valid-metadata?
       metadata
       (result-metadata-for-query query))))
