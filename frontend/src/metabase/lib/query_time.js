@@ -165,7 +165,10 @@ export function parseFieldBucketing(field, defaultUnit = null) {
             return field[3];
         } if (mbqlEq(field[0], "fk->") || mbqlEq(field[0], "field-id")) {
             return defaultUnit;
-        } else {
+        } if (mbqlEq(field[0], "field-literal")) {
+            return defaultUnit;
+        }
+        else {
             console.warn("Unknown field format", field);
         }
     }
@@ -188,6 +191,7 @@ export function parseFieldTargetId(field) {
         if (mbqlEq(field[0], "field-id"))       return field[1];
         if (mbqlEq(field[0], "fk->"))           return field[1];
         if (mbqlEq(field[0], "datetime-field")) return parseFieldTargetId(field[1]);
+        if (mbqlEq(field[0], "field-literal"))  return field;
     }
 
     console.warn("Unknown field format", field);

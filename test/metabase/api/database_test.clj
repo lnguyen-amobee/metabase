@@ -4,7 +4,9 @@
              [driver :as driver]
              [util :as u]]
             [metabase.models
-             [database :refer [Database]]
+             [card :refer [Card]]
+             [collection :refer [Collection]]
+             [database :as database :refer [Database]]
              [field :refer [Field]]
              [table :refer [Table]]]
             [metabase.test
@@ -15,7 +17,8 @@
              [users :refer :all]]
             [toucan
              [db :as db]
-             [hydrate :as hydrate]]))
+             [hydrate :as hydrate]]
+            [toucan.util.test :as tt]))
 
 ;; HELPER FNS
 
@@ -315,3 +318,55 @@
   [["CATEGORIES" "Table"]
    ["CATEGORY_ID" "VENUES :type/Integer :type/FK"]]
   ((user->client :rasta) :get 200 (format "database/%d/autocomplete_suggestions" (id)) :prefix "cat"))
+
+
+;;; GET /api/database?include_cards=true
+;; Check that we get back 'virtual' tables for Saved Questions
+(defn- card-with-native-query [card-name & {:as kvs}]
+  (merge {:name          card-name
+          :database_id   (data/id)
+          :dataset_query {:database (data/id)
+                          :type     :native
+                          :native   {:query (format "SELECT * FROM VENUES")}}}
+         kvs))
+
+(tt/expect-with-temp [Card [card (card-with-native-query "Kanye West Quote Views Per Month")]]
+  {:name     "Saved Questions"
+   :id       database/virtual-id
+   :features ["basic-aggregations"]
+   :tables   [{:id           (format "card__%d" (u/get-id card))
+               :db_id        database/virtual-id
+               :display_name "Kanye West Quote Views Per Month"
+               :schema       "All questions"
+               :description  nil}]}
+  (do
+    ;; run the Card which will populate its result_metadata column
+    ((user->client :crowberto) :post 200 (format "card/%d/query" (u/get-id card)))
+
+    ;; Now fetch the database list. The 'Saved Questions' DB should be last on the list
+    (last ((user->client :crowberto) :get 200 "database" :include_cards true))))
+
+;; make sure that GET /api/database?include_cards=true groups pretends COLLECTIONS are SCHEMAS
+(tt/expect-with-temp [Collection [stamp-collection {:name "Stamps"}]
+                      Collection [coin-collection  {:name "Coins"}]
+                      Card       [stamp-card (card-with-native-query "Total Stamp Count", :collection_id (u/get-id stamp-collection))]
+                      Card       [coin-card  (card-with-native-query "Total Coin Count",  :collection_id (u/get-id coin-collection))]]
+  {:name     "Saved Questions"
+   :id       database/virtual-id
+   :features ["basic-aggregations"]
+   :tables     [{:id           (format "card__%d" (u/get-id coin-card))
+                 :db_id        database/virtual-id
+                 :display_name "Total Coin Count"
+                 :schema       "Coins"
+                 :description  nil}
+                {:id           (format "card__%d" (u/get-id stamp-card))
+                 :db_id        database/virtual-id
+                 :display_name "Total Stamp Count"
+                 :schema       "Stamps"
+                 :description  nil}]}
+  (do
+    ;; run the Cards which will populate their result_metadata columns
+    (doseq [card [stamp-card coin-card]]
+      ((user->client :crowberto) :post 200 (format "card/%d/query" (u/get-id card))))
+    ;; Now fetch the database list. The 'Saved Questions' DB should be last on the list. Cards should have their Collection name as their Schema
+    (last ((user->client :crowberto) :get 200 "database" :include_cards true))))

@@ -23,8 +23,9 @@
         (i/map->DateTimeField {:field field, :unit :default})
         field))))
 
-(defn- should-add-implicit-fields? [{{:keys [fields breakout], aggregations :aggregation} :query, :as query}]
+(defn- should-add-implicit-fields? [{{:keys [fields breakout source-table], aggregations :aggregation} :query, :as query}]
   (and (qputil/mbql-query? query)
+        source-table               ; if query is using another query as its source there's no table to add nested fields for
        (not (or (seq aggregations)
                 (seq breakout)
                 (seq fields)))))
