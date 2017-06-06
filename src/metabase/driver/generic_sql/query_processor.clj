@@ -1,6 +1,7 @@
 (ns metabase.driver.generic-sql.query-processor
   "The Query Processor is responsible for translating the Metabase Query Language into HoneySQL SQL forms."
   (:require [clojure.java.jdbc :as jdbc]
+            [clojure.string :as str]
             [clojure.tools.logging :as log]
             [honeysql
              [core :as hsql]
@@ -257,7 +258,7 @@
   ;; TODO - what alias should we give the source query?
   (assoc honeysql-form
     :from [[(if native
-              (hsql/raw (str "(" native ")"))
+              (hsql/raw (str "(" (str/replace native #";+\s*$" "") ")")) ; strip off any trailing slashes
               (apply-clauses driver {} source-query))
             :source]]))
 
