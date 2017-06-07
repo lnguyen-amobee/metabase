@@ -154,7 +154,7 @@
                                fk-field-id   :- (s/maybe (s/constrained su/IntGreaterThanZero
                                                                         (fn [_] (or (assert-driver-supports :foreign-keys) true)) ; assert-driver-supports will throw Exception if driver is bound
                                                                         "foreign-keys is not supported by this driver."))         ; and driver does not support foreign keys
-                               datetime-unit :- (s/maybe (apply s/enum datetime-field-units))])
+                               datetime-unit :- (s/maybe DatetimeFieldUnit)])
 
 (s/defrecord AgFieldRef [index :- s/Int])
 ;; TODO - add a method to get matching expression from the query?
@@ -162,8 +162,9 @@
 
 ;; TODO - maybe we should figure out some way to have the schema validate that the driver supports field literals, like we do for some of the other clauses.
 ;; Ideally we'd do that in a more generic way (perhaps in expand, we could make the clauses specify required feature metadata and have that get checked automatically?)
-(s/defrecord FieldLiteral [field-name :- su/NonBlankString
-                           base-type  :- su/FieldType]
+(s/defrecord FieldLiteral [field-name    :- su/NonBlankString
+                           base-type     :- su/FieldType
+                           datetime-unit :- (s/maybe DatetimeFieldUnit)]
   clojure.lang.Named
   (getName [_] field-name))
 

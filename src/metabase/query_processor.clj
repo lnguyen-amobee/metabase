@@ -105,8 +105,10 @@
   "Return the native form for QUERY (e.g. for a MBQL query on Postgres this would return a map containing the compiled SQL form)."
   {:style/indent 0}
   [query]
-  (-> ((qp-pipeline identity) query)
-      (get-in [:data :native_form])))
+  (let [results ((qp-pipeline identity) query)]
+    (or (get-in results [:data :native_form])
+        (throw (ex-info "No native form returned."
+                 results)))))
 
 (defn process-query
   "A pipeline of various QP functions (including middleware) that are used to process MB queries."

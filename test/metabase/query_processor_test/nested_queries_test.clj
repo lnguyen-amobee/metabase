@@ -169,3 +169,13 @@
      :type     :query
      :query    {:source-query {:source-table (data/id :venues)}
                 :filter       [:= [:field-literal :BIRD.ID :type/Integer] 1]}}))
+
+;; make sure that field-literals work as DateTimeFields
+(expect
+  {:query "SELECT * FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" WHERE parsedatetime(formatdatetime(\"BIRD.ID\", 'YYYYww'), 'YYYYww') = 1 LIMIT 1048576"
+   :params nil}
+  (qp/query->native
+    {:database (data/id)
+     :type     :query
+     :query    {:source-query {:source-table (data/id :venues)}
+                :filter       [:= [:datetime-field [:field-literal :BIRD.ID :type/DateTime] :week] 1]}}))

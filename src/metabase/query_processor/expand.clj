@@ -41,7 +41,7 @@
   "Generic reference to a Field by FIELD-NAME. This is intended for use when using nested queries so as to allow one to refer to the fields coming back from
    the source query."
   [field-name :- su/KeywordOrString, field-type :- su/KeywordOrString]
-  (i/strict-map->FieldLiteral {:field-name (u/keyword->qualified-name field-name), :base-type (keyword field-type)}))
+  (i/map->FieldLiteral {:field-name (u/keyword->qualified-name field-name), :base-type (keyword field-type)}))
 
 (s/defn ^:ql ^:always-validate named :- i/Aggregation
   "Specify a CUSTOM-NAME to use for a top-level AGGREGATION-OR-EXPRESSION in the results.
@@ -50,7 +50,7 @@
   [aggregation-or-expression :- i/Aggregation, custom-name :- su/NonBlankString]
   (assoc aggregation-or-expression :custom-name custom-name))
 
-(s/defn ^:ql ^:always-validate datetime-field :- FieldPlaceholder
+(s/defn ^:ql ^:always-validate datetime-field :- i/AnyField
   "Reference to a `DateTimeField`. This is just a `Field` reference with an associated datetime UNIT."
   ([f _ unit] (log/warn (u/format-color 'yellow (str "The syntax for datetime-field has changed in MBQL '98. [:datetime-field <field> :as <unit>] is deprecated. "
                                                      "Prefer [:datetime-field <field> <unit>] instead.")))

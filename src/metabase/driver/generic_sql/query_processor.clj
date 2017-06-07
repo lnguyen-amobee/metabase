@@ -79,8 +79,9 @@
         :else                                               field)))
 
   FieldLiteral
-  (formatted [{:keys [field-name]}]
-    (keyword (hx/escape-dots (name field-name))))
+  (formatted [{:keys [field-name datetime-unit]}]
+    (cond->> (keyword (hx/escape-dots (name field-name)))
+      datetime-unit (sql/date (driver) datetime-unit)))
 
   DateTimeField
   (formatted [{unit :unit, field :field}]
