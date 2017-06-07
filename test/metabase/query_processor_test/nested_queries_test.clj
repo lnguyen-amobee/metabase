@@ -162,23 +162,25 @@
 
 ;; make sure that dots in field literal identifiers get escaped so you can't reference fields from other tables using them
 (expect
-  {:query  "SELECT * FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" WHERE \"BIRD.ID\" = 1 LIMIT 1048576",
+  {:query  "SELECT * FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" WHERE \"BIRD.ID\" = 1 LIMIT 10"
    :params nil}
   (qp/query->native
     {:database (data/id)
      :type     :query
      :query    {:source-query {:source-table (data/id :venues)}
-                :filter       [:= [:field-literal :BIRD.ID :type/Integer] 1]}}))
+                :filter       [:= [:field-literal :BIRD.ID :type/Integer] 1]
+                :limit        10}}))
 
 ;; make sure that field-literals work as DateTimeFields
 (expect
-  {:query "SELECT * FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" WHERE parsedatetime(formatdatetime(\"BIRD.ID\", 'YYYYww'), 'YYYYww') = 1 LIMIT 1048576"
+  {:query  "SELECT * FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" WHERE parsedatetime(formatdatetime(\"BIRD.ID\", 'YYYYww'), 'YYYYww') = 1 LIMIT 10"
    :params nil}
   (qp/query->native
     {:database (data/id)
      :type     :query
      :query    {:source-query {:source-table (data/id :venues)}
-                :filter       [:= [:datetime-field [:field-literal :BIRD.ID :type/DateTime] :week] 1]}}))
+                :filter       [:= [:datetime-field [:field-literal :BIRD.ID :type/DateTime] :week] 1]
+                :limit        10}}))
 
 ;; make sure that aggregation references match up to aggregations from the same level they're from
 ;; e.g. the ORDER BY in the source-query should refer the 'stddev' aggregation, NOT the 'avg' aggregation
@@ -201,10 +203,11 @@
 
 ;; make sure that we handle [field-id [field-literal ...]] forms gracefully, despite that not making any sense
 (expect
-  {:query  "SELECT \"category_id\" AS \"category_id\" FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" GROUP BY \"category_id\" ORDER BY \"category_id\" ASC LIMIT 1048576"
+  {:query  "SELECT \"category_id\" AS \"category_id\" FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" GROUP BY \"category_id\" ORDER BY \"category_id\" ASC LIMIT 10"
    :params nil}
   (qp/query->native
     {:database (data/id)
      :type     :query
      :query    {:source-query {:source-table (data/id :venues)}
-                :breakout     [:field-id [:field-literal "category_id" :type/Integer]]}}))
+                :breakout     [:field-id [:field-literal "category_id" :type/Integer]]
+                :limit        10}}))
