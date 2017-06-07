@@ -24,10 +24,16 @@
   [index :- s/Int]
   (i/map->AgFieldRef {:index index}))
 
-(s/defn ^:ql ^:always-validate field-id :- FieldPlaceholder
+(s/defn ^:ql ^:always-validate field-id :- i/AnyField
   "Create a generic reference to a `Field` with ID."
-  [id :- su/IntGreaterThanZero]
-  (i/map->FieldPlaceholder {:field-id id}))
+  [id]
+  ;; If for some reason we were passed a field literal (e.g. [field-id [field-literal ...]])
+  ;; we should technically barf but since we know what people meant we'll be nice for once and fix it for them :D
+  (if (instance? FieldLiteral id)
+    (do
+      (log/warn (u/format-color 'yellow (format "It doesn't make sense to use `field-literal` forms inside `field-id` forms. Instead of [field-id %s], just do %s." id id)))
+      id)
+    (i/map->FieldPlaceholder {:field-id id})))
 
 (s/defn ^:private ^:always-validate field :- i/AnyField
   "Generic reference to a `Field`. F can be an integer Field ID, or various other forms like `fk->` or `aggregation`."

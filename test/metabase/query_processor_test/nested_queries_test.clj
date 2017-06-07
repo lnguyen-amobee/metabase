@@ -193,8 +193,18 @@
   (qp/query->native
     {:database (data/id)
      :type     :query
-     :query    {:source-query {:source_table (data/id :venues)
+     :query    {:source-query {:source-table (data/id :venues)
                                :aggregation  [[:stddev [:field-id (data/id :venues :id)]]]
                                :breakout     [[:field-id (data/id :venues :price)]]
                                :order-by     [[[:aggregate-field 0] :descending]]}
                 :aggregation  [[:avg [:field-literal "stddev" :type/Integer]]]}}))
+
+;; make sure that we handle [field-id [field-literal ...]] forms gracefully, despite that not making any sense
+(expect
+  {:query  "SELECT \"category_id\" AS \"category_id\" FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" GROUP BY \"category_id\" ORDER BY \"category_id\" ASC LIMIT 1048576"
+   :params nil}
+  (qp/query->native
+    {:database (data/id)
+     :type     :query
+     :query    {:source-query {:source-table (data/id :venues)}
+                :breakout     [:field-id [:field-literal "category_id" :type/Integer]]}}))
