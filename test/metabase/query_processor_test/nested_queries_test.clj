@@ -179,3 +179,22 @@
      :type     :query
      :query    {:source-query {:source-table (data/id :venues)}
                 :filter       [:= [:datetime-field [:field-literal :BIRD.ID :type/DateTime] :week] 1]}}))
+
+;; make sure that aggregation references match up to aggregations from the same level they're from
+;; e.g. the ORDER BY in the source-query should refer the 'stddev' aggregation, NOT the 'avg' aggregation
+(expect
+  {:query (str "SELECT avg(\"stddev\") AS \"avg\" FROM ("
+                   "SELECT STDDEV(\"PUBLIC\".\"VENUES\".\"ID\") AS \"stddev\", \"PUBLIC\".\"VENUES\".\"PRICE\" AS \"PRICE\" "
+                   "FROM \"PUBLIC\".\"VENUES\" "
+                   "GROUP BY \"PUBLIC\".\"VENUES\".\"PRICE\" "
+                   "ORDER BY \"stddev\" DESC"
+               ") \"source\"")
+   :params nil}
+  (qp/query->native
+    {:database (data/id)
+     :type     :query
+     :query    {:source-query {:source_table (data/id :venues)
+                               :aggregation  [[:stddev [:field-id (data/id :venues :id)]]]
+                               :breakout     [[:field-id (data/id :venues :price)]]
+                               :order-by     [[[:aggregate-field 0] :descending]]}
+                :aggregation  [[:avg [:field-literal "stddev" :type/Integer]]]}}))

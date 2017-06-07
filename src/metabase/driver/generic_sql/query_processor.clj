@@ -24,6 +24,13 @@
   "The outer query currently being processed."
   nil)
 
+(def ^:private ^:dynamic *nested-query-level*
+  "How many levels deep are we into nested queries? (0 = top level.)
+   We keep track of this so we know what level to find referenced aggregations
+  (otherwise something like [:aggregate-field 0] could be ambiguous in a nested query).
+  Each nested query increments this counter by 1."
+  0)
+
 (defn- driver [] {:pre [(map? *query*)]} (:driver *query*))
 
 ;; register the function "distinct-count" with HoneySQL
@@ -47,6 +54,17 @@
   [expression-name]
   (or (get-in *query* [:query :expressions (keyword expression-name)]) (:expressions (:query *query*))
       (throw (Exception. (format "No expression named '%s'." (name expression-name))))))
+
+(defn- aggregation-at-index
+  "Fetch the aggregation at index. This is intended to power aggregate field references (e.g. [:aggregate-field 0]).
+   This also handles nested queries, which could be potentially ambiguous if multiple levels had aggregations."
+  ([index]
+   (aggregation-at-index index (:query *query*) *nested-query-level*))
+  ;; keep recursing deeper into the query until we get to the same level the aggregation reference was defined at
+  ([index query aggregation-level]
+   (if (zero? aggregation-level)
+     (nth (:aggregation query) index)
+     (recur index (:source-query query) (dec aggregation-level)))))
 
 ;; TODO - maybe this fn should be called `->honeysql` instead.
 (defprotocol ^:private IGenericSQLFormattable
@@ -90,7 +108,7 @@
   ;; e.g. the ["aggregation" 0] fields we allow in order-by
   AgFieldRef
   (formatted [{index :index}]
-    (let [{:keys [aggregation-type]} (nth (:aggregation (:query *query*)) index)]
+    (let [{:keys [aggregation-type]} (aggregation-at-index index)]
       ;; For some arcane reason we name the results of a distinct aggregation "count",
       ;; everything else is named the same as the aggregation
       (if (= aggregation-type :distinct)
@@ -260,7 +278,8 @@
   (assoc honeysql-form
     :from [[(if native
               (hsql/raw (str "(" (str/replace native #";+\s*$" "") ")")) ; strip off any trailing slashes
-              (apply-clauses driver {} source-query))
+              (binding [*nested-query-level* (inc *nested-query-level*)]
+                (apply-clauses driver {} source-query)))
             :source]]))
 
 (def ^:private clause-handlers
