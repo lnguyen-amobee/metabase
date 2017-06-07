@@ -31,7 +31,8 @@
   ;; we should technically barf but since we know what people meant we'll be nice for once and fix it for them :D
   (if (instance? FieldLiteral id)
     (do
-      (log/warn (u/format-color 'yellow (format "It doesn't make sense to use `field-literal` forms inside `field-id` forms. Instead of [field-id %s], just do %s." id id)))
+      (log/warn (u/format-color 'yellow (str "It doesn't make sense to use `field-literal` forms inside `field-id` forms.\n"
+                                             "Instead of [field-id [field-literal ...]], just do [field-literal ...].")))
       id)
     (i/map->FieldPlaceholder {:field-id id})))
 
