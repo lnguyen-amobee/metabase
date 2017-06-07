@@ -362,7 +362,6 @@
   (let [db-id->engine (memoize (fn [db-id] (db/select-one-field :engine Database, :id db-id)))]
     (fn [db-id]
       {:pre [db-id]}
-      (println "(db-id->engine db-id):" (db-id->engine db-id)) ; NOCOMMIT
       (when-let [engine (db-id->engine db-id)]
         (engine->driver engine)))))
 
