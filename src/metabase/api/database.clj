@@ -31,7 +31,6 @@
 
 ;;; ------------------------------------------------------------ GET /api/database ------------------------------------------------------------
 
-
 (defn- add-tables [dbs]
   (let [db-id->tables (group-by :db_id (filter mi/can-read? (db/select Table
                                                               :active true
@@ -48,19 +47,40 @@
                                       (user-has-perms? perms/native-read-path)      :read
                                       :else                                         :none)))))
 
+(defn- card-database-supports-nested-queries? [{{database-id :database} :dataset_query, :as card}]
+  (when database-id
+    (when-let [driver (driver/database-id->driver database-id)]
+      (driver/driver-supports? driver :nested-queries)
+      (mi/can-read? card))))
+
+(defn- card-has-ambiguous-columns?
+  "We know a card has ambiguous columns if any of the columns that come back end in `_2` (etc.) because that's what
+   clojure.java.jdbc 'helpfully' does for us automatically.
+   Presence of ambiguous columns disqualifies a query for use as a source query because something like
+
+     SELECT name
+     FROM (
+       SELECT x.name, y.name
+       FROM x
+       LEFT JOIN y on x.id = y.id
+     )
+
+   would be ambiguous. Too many things break when attempting to use a query like this. In the future, this may be
+   supported, but it will likely require rewriting the source SQL query to add appropriate aliases (this is even
+   trickier if the source query uses `SELECT *`)."
+  [{result-metadata :result_metadata}]
+  (some (partial re-find #"_2$")
+        (map (comp name :name) result-metadata)))
+
 (defn- source-query-cards
   "Fetch the Cards that can be used as source queries (e.g. presented as virtual tables)."
   []
-  (as-> (db/select [Card :name :description :database_id :dataset_query :id :collection_id]
+  (as-> (db/select [Card :name :description :database_id :dataset_query :id :collection_id :result_metadata]
           :result_metadata [:not= nil]
           {:order-by [[:%lower.name :asc]]}) <>
-    (filter (fn [{{database-id :database} :dataset_query, :as card}]
-              (let [driver (driver/database-id->driver database-id)]
-                (and database-id
-                     driver
-                     (driver/driver-supports? driver :nested-queries)
-                     (mi/can-read? card))))
-            <>)
+    (filter card-database-supports-nested-queries? <>)
+    (remove card-has-ambiguous-columns? <>)
+    (map #(dissoc % :result_metadata) <>)      ; frontend has no use for result_metadata just yet so strip it out because it can be big
     (hydrate <> :collection)))
 
 (defn- cards-virtual-tables

@@ -330,15 +330,19 @@
                           :native   {:query (format "SELECT * FROM VENUES")}}}
          kvs))
 
-(tt/expect-with-temp [Card [card (card-with-native-query "Kanye West Quote Views Per Month")]]
+(defn- saved-questions-virtual-db {:style/indent 0} [& card-tables]
   {:name     "Saved Questions"
    :id       database/virtual-id
    :features ["basic-aggregations"]
-   :tables   [{:id           (format "card__%d" (u/get-id card))
-               :db_id        database/virtual-id
-               :display_name "Kanye West Quote Views Per Month"
-               :schema       "All questions"
-               :description  nil}]}
+   :tables   card-tables})
+
+(tt/expect-with-temp [Card [card (card-with-native-query "Kanye West Quote Views Per Month")]]
+  (saved-questions-virtual-db
+    {:id           (format "card__%d" (u/get-id card))
+     :db_id        database/virtual-id
+     :display_name "Kanye West Quote Views Per Month"
+     :schema       "All questions"
+     :description  nil})
   (do
     ;; run the Card which will populate its result_metadata column
     ((user->client :crowberto) :post 200 (format "card/%d/query" (u/get-id card)))
@@ -351,22 +355,31 @@
                       Collection [coin-collection  {:name "Coins"}]
                       Card       [stamp-card (card-with-native-query "Total Stamp Count", :collection_id (u/get-id stamp-collection))]
                       Card       [coin-card  (card-with-native-query "Total Coin Count",  :collection_id (u/get-id coin-collection))]]
-  {:name     "Saved Questions"
-   :id       database/virtual-id
-   :features ["basic-aggregations"]
-   :tables     [{:id           (format "card__%d" (u/get-id coin-card))
-                 :db_id        database/virtual-id
-                 :display_name "Total Coin Count"
-                 :schema       "Coins"
-                 :description  nil}
-                {:id           (format "card__%d" (u/get-id stamp-card))
-                 :db_id        database/virtual-id
-                 :display_name "Total Stamp Count"
-                 :schema       "Stamps"
-                 :description  nil}]}
+  (saved-questions-virtual-db
+    {:id           (format "card__%d" (u/get-id coin-card))
+     :db_id        database/virtual-id
+     :display_name "Total Coin Count"
+     :schema       "Coins"
+     :description  nil}
+    {:id           (format "card__%d" (u/get-id stamp-card))
+     :db_id        database/virtual-id
+     :display_name "Total Stamp Count"
+     :schema       "Stamps"
+     :description  nil})
   (do
     ;; run the Cards which will populate their result_metadata columns
     (doseq [card [stamp-card coin-card]]
       ((user->client :crowberto) :post 200 (format "card/%d/query" (u/get-id card))))
     ;; Now fetch the database list. The 'Saved Questions' DB should be last on the list. Cards should have their Collection name as their Schema
     (last ((user->client :crowberto) :get 200 "database" :include_cards true))))
+
+;; make sure that GET /api/database?include_cards=true removes Cards that have ambiguous columns
+(tt/expect-with-temp [Card [ok-card         (assoc (card-with-native-query "OK Card")         :result_metadata [{:name "cam"}])]
+                      Card [cambiguous-card (assoc (card-with-native-query "Cambiguous Card") :result_metadata [{:name "cam"} {:name "cam_2"}])]]
+  (saved-questions-virtual-db
+    {:id           (format "card__%d" (u/get-id ok-card))
+     :db_id        database/virtual-id
+     :display_name "OK Card"
+     :schema       "All questions"
+     :description  nil})
+  (last ((user->client :crowberto) :get 200 "database" :include_cards true)))
