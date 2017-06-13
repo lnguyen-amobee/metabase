@@ -215,13 +215,13 @@
   "Schema for an MBQL datetime value: an ISO-8601 string, `java.sql.Date`, or a relative dateitme form."
   (s/named (s/cond-pre RelativeDatetime LiteralDatetime) "Valid datetime (must ISO-8601 string literal or a relative-datetime form)"))
 
-(def OrderableValue
+(def OrderableValueLiteral
   "Schema for something that is orderable value in MBQL (either a number or datetime)."
   (s/named (s/cond-pre s/Num Datetime) "Valid orderable value (must be number or datetime)"))
 
 (def AnyValueLiteral
   "Schema for anything that is a considered a valid value literal in MBQL - `nil`, a `Boolean`, `Number`, `String`, or relative datetime form."
-  (s/named (s/maybe (s/cond-pre s/Bool su/NonBlankString OrderableValue)) "Valid value (must be nil, boolean, number, string, or a relative-datetime form)"))
+  (s/named (s/maybe (s/cond-pre s/Bool su/NonBlankString OrderableValueLiteral)) "Valid value (must be nil, boolean, number, string, or a relative-datetime form)"))
 
 
 ;; Value is the expansion of a value within a QL clause
@@ -229,6 +229,17 @@
 ;; TODO - Value doesn't need the whole field, just the relevant type info / units
 (s/defrecord Value [value   :- AnyValueLiteral
                     field   :- (s/recursive #'AnyField)])
+
+(def OrderableValue
+  "Schema for an instance of `Value` whose `:value` property is itself orderable (a datetime or number, i.e. a `OrderableValueLiteral`)."
+  (s/named (s/constrained Value (fn [{value :value}]
+                                  (nil? (s/check OrderableValueLiteral value))))
+           "Value that is orderable (Value whose :value is something orderable, like a datetime or number)"))
+
+(def StringValue
+  "Schema for an instance of `Value` whose `:value` property is itself a string (a datetime or string, i.e. a `OrderableValueLiteral`)."
+  (s/named (s/constrained Value (comp string? :value))
+           "Value that is a string (Value whose :value is a string)"))
 
 ;; e.g. an absolute point in time (literal)
 (s/defrecord DateTimeValue [value :- Timestamp
@@ -264,11 +275,21 @@
 
 (def OrderableValuePlaceholder
   "`ValuePlaceholder` schema with the additional constraint that the value be orderable (a number or datetime)."
-  (s/constrained ValuePlaceholder (comp (complement (s/checker OrderableValue)) :value) ":value must be orderable (number or datetime)"))
+  (s/constrained ValuePlaceholder (comp (complement (s/checker OrderableValueLiteral)) :value) ":value must be orderable (number or datetime)"))
+
+(def OrderableValueOrPlaceholder
+  "Schema for an `OrderableValue` (instance of `Value` whose `:value` is orderable) or a placeholder for one."
+  (s/named (s/cond-pre OrderableValue OrderableValuePlaceholder)
+           "Must be an OrderableValue or OrderableValuePlaceholder"))
 
 (def StringValuePlaceholder
   "`ValuePlaceholder` schema with the additional constraint that the value be a string/"
   (s/constrained ValuePlaceholder (comp string? :value) ":value must be a string"))
+
+(def StringValueOrPlaceholder
+  "Schema for an `StringValue` (instance of `Value` whose `:value` is a string) or a placeholder for one."
+  (s/named (s/cond-pre StringValue StringValuePlaceholder)
+           "Must be an StringValue or StringValuePlaceholder"))
 
 (def AnyFieldOrValue
   "Schema that accepts anything normally considered a field (including expressions and literals) *or* a value or value placehoder."
@@ -312,16 +333,16 @@
 
 (s/defrecord ComparisonFilter [filter-type :- (s/enum :< :<= :> :>=)
                                field       :- FieldPlaceholderOrExpressionRef
-                               value       :- OrderableValuePlaceholder])
+                               value       :- OrderableValueOrPlaceholder])
 
 (s/defrecord BetweenFilter [filter-type  :- (s/eq :between)
                             min-val      :- OrderableValuePlaceholder
                             field        :- FieldPlaceholderOrExpressionRef
-                            max-val      :- OrderableValuePlaceholder])
+                            max-val      :- OrderableValueOrPlaceholder])
 
 (s/defrecord StringFilter [filter-type :- (s/enum :starts-with :contains :ends-with)
                            field       :- FieldPlaceholderOrExpressionRef
-                           value       :- StringValuePlaceholder])
+                           value       :- (s/cond-pre s/Str StringValueOrPlaceholder)]) ; TODO - not 100% sure why this is also allowed to accept a plain string
 
 (def SimpleFilterClause
   "Schema for a non-compound, non-`not` MBQL `filter` clause."

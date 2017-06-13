@@ -211,3 +211,23 @@
      :query    {:source-query {:source-table (data/id :venues)}
                 :breakout     [:field-id [:field-literal "category_id" :type/Integer]]
                 :limit        10}}))
+
+;; Make sure we can filter by string fields
+(expect
+  {:query  "SELECT * FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" WHERE \"text\" <> ? LIMIT 10"
+   :params ["Coo"]}
+  (qp/query->native {:database (data/id)
+                     :type     :query
+                     :query    {:source-query {:source-table (data/id :venues)}
+                                :limit        10
+                                :filter       [:!= [:field-literal "text" :type/Text] "Coo"]}}))
+
+;; Make sure we can filter by number fields
+(expect
+  {:query  "SELECT * FROM (SELECT * FROM \"PUBLIC\".\"VENUES\") \"source\" WHERE \"sender_id\" > 3 LIMIT 10"
+   :params nil}
+  (qp/query->native {:database (data/id)
+                     :type     :query
+                     :query    {:source-query {:source-table (data/id :venues)}
+                                :limit        10
+                                :filter       [:> [:field-literal "sender_id" :type/Integer] 3]}}))

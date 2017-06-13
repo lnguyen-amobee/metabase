@@ -30,7 +30,16 @@ export default class FieldName extends Component {
 
         let parts = [];
 
-        if (fieldTarget && !fieldTarget.field) {
+        // if the Field in question is a field literal, e.g. ["field-literal", <name>, <type>] just use name as-is
+        if (Query.isFieldLiteral(field)) {
+            parts.push(<span key="field">{field[1]}</span>);
+        }
+        // otherwise if for some weird reason we wound up with a Field Literal inside a field ID,
+        // e.g. ["field-id", ["field-literal", <name>, <type>], still just use the name as-is
+        else if (Query.isLocalField(field) && Query.isFieldLiteral(field[1])) {
+            parts.push(<span key="field">{field[1][1]}</span>);
+        }
+        else if (fieldTarget && !fieldTarget.field) {
             parts.push(<span className="text-error" key="field">Missing Field</span>);
         } else if (fieldTarget) {
             // fk path
