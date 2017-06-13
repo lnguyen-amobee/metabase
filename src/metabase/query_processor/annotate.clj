@@ -150,12 +150,14 @@
    :field-display-name (humanization/name->human-readable-name (name k))})
 
 (defn- info-for-column-from-source-query
-  "Return information about the columns that come back when we're using a source query.
-   (This is basically the same as the generic information, but we also add an `:id` column so
-   drill-through operations can be done on the columns)."
+  "Return information about a column that comes back when we're using a source query.
+   (This is basically the same as the generic information, but we also add `:id` and `:source`
+   columns so drill-through operations can be done on it)."
   [k & [initial-values]]
   (let [col (generic-info-for-missing-key k initial-values)]
-    (assoc col :id [:field-literal k (:base-type col)])) )
+    (assoc col
+      :id     [:field-literal k (:base-type col)]
+      :source :fields)))
 
 
 (defn- info-for-duplicate-field
