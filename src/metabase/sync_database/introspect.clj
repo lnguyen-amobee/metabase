@@ -138,13 +138,21 @@
 
 
 ;;; ------------------------------------------------------------ INTROSPECT-DATABASE-AND-UPDATE-RAW-TABLES! ------------------------------------------------------------
+(defn- remove-partitions
+  "Iterate through a list of table maps and see if current table is a partition, if so remove"
+  [table]
+  (let [table-name (get table :name)]
+    ;;; read from file
+    (nil? (re-find #"_[0-9]+" table-name))))
+
 
 (defn- introspect-tables!
   "Introspect each table and save off the schema details we find."
   [driver database tables existing-tables]
   (let [tables-count          (count tables)
-        finished-tables-count (atom 0)]
-    (doseq [{table-schema :schema, table-name :name, :as table-def} tables]
+        finished-tables-count (atom 0)
+        cleaned-tables (filter remove-partitions tables)]
+    (doseq [{table-schema :schema, table-name :name, :as table-def} cleaned-tables]
       (try
         (let [table-def (if (contains? (driver/features driver) :dynamic-schema)
                           ;; dynamic schemas are handled differently, we'll handle them elsewhere
