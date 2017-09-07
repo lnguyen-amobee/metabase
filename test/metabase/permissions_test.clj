@@ -18,7 +18,7 @@
              [pulse-channel-recipient :refer [PulseChannelRecipient]]
              [segment :refer [Segment]]
              [table :refer [Table]]]
-            [metabase.query-processor.expand :as ql]
+            [metabase.query-processor.middleware.expand :as ql]
             [metabase.test.data :as data]
             [metabase.test.data.users :as test-users]
             [metabase.util :as u]
@@ -129,7 +129,7 @@
      :table_id      (u/get-id table)
      :dataset_query {:database (u/get-id db)
                      :type     "native"
-                     :query    (format "SELECT count(*) FROM \"%s\";" (:name table))}}))
+                     :native   {:query (format "SELECT count(*) FROM \"%s\";" (:name table))}}}))
 
 
 (def ^:dynamic *card:db1-count-of-venues*)

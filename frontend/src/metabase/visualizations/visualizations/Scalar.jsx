@@ -16,7 +16,9 @@ import d3 from "d3";
 
 import type { VisualizationProps } from "metabase/meta/types/Visualization";
 
-export default class Scalar extends Component<*, VisualizationProps, *> {
+export default class Scalar extends Component {
+    props: VisualizationProps;
+
     static uiName = "Number";
     static identifier = "scalar";
     static iconName = "number";
@@ -191,26 +193,31 @@ export default class Scalar extends Component<*, VisualizationProps, *> {
                         {compactScalarValue}
                     </span>
                 </Ellipsified>
-                <div className={styles.Title + " flex align-center"}>
-                    <Ellipsified tooltip={card.name}>
-                        <span
-                            onClick={onChangeCardAndRun && (() => onChangeCardAndRun({ nextCard: card }))}
-                            className={cx("fullscreen-normal-text fullscreen-night-text", {
-                                "cursor-pointer": !!onChangeCardAndRun
-                            })}
-                        >
-                            {settings["card.title"]}
-                        </span>
+                { this.props.isDashboard  && (
+                    <div className={styles.Title + " flex align-center relative"}>
+                        <Ellipsified tooltip={card.name}>
+                            <span
+                                onClick={onChangeCardAndRun && (() => onChangeCardAndRun({ nextCard: card }))}
+                                className={cx("fullscreen-normal-text fullscreen-night-text", {
+                                    "cursor-pointer": !!onChangeCardAndRun
+                                })}
+                            >
+                                <span className="Scalar-title">{settings["card.title"]}</span>
+                            </span>
 
-                    </Ellipsified>
-                    { description &&
-                      <div className="hover-child">
-                          <Tooltip tooltip={description} maxWidth={'22em'}>
-                              <Icon name='info' />
-                          </Tooltip>
-                      </div>
-                    }
-                </div>
+                        </Ellipsified>
+                        { description &&
+                            <div
+                                className="absolute top bottom hover-child flex align-center justify-center"
+                                style={{ right: -20, top: 2 }}
+                            >
+                              <Tooltip tooltip={description} maxWidth={'22em'}>
+                                  <Icon name='infooutlined' />
+                              </Tooltip>
+                          </div>
+                        }
+                    </div>
+                )}
             </div>
         );
     }

@@ -63,7 +63,9 @@ type Props = {
 
 @connect(mapStateToProps, mapDispatchToProps)
 @DashboardControls
-export default class PublicDashboard extends Component<*, Props, *> {
+export default class PublicDashboard extends Component {
+    props: Props;
+
     // $FlowFixMe
     async componentWillMount() {
         const { initialize, fetchDashboard, fetchDashboardCardData, setErrorPage, location, params: { uuid, token }}  = this.props;
@@ -108,7 +110,7 @@ export default class PublicDashboard extends Component<*, Props, *> {
                         {...this.props}
                         className={"spread"}
                         // Don't allow clicking titles on public dashboards
-                        navigateToNewCard={null}
+                        navigateToNewCardFromDashboard={null}
                     />
                 }
                 </LoadingAndErrorWrapper>

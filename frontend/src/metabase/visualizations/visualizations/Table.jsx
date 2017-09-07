@@ -9,8 +9,7 @@ import * as DataGrid from "metabase/lib/data_grid";
 
 import Query from "metabase/lib/query";
 import { isMetric, isDimension } from "metabase/lib/schema_metadata";
-import { columnsAreValid } from "metabase/visualizations/lib/settings";
-import { getFriendlyName } from "metabase/visualizations/lib/utils";
+import { columnsAreValid, getFriendlyName } from "metabase/visualizations/lib/utils";
 import ChartSettingOrderedFields from "metabase/visualizations/components/settings/ChartSettingOrderedFields.jsx";
 
 import _ from "underscore";
@@ -29,7 +28,8 @@ type State = {
     data: ?DatasetData
 }
 
-export default class Table extends Component<*, Props, State> {
+export default class Table extends Component {
+    props: Props;
     state: State;
 
     static uiName = "Table";
@@ -126,7 +126,13 @@ export default class Table extends Component<*, Props, State> {
         const sort = getIn(card, ["dataset_query", "query", "order_by"]) || null;
         const isPivoted = settings["table.pivot"];
         const TableComponent = isDashboard ? TableSimple : TableInteractive;
+
+        if (!data) {
+            return null;
+        }
+
         return (
+            // $FlowFixMe
             <TableComponent
                 {...this.props}
                 data={data}
@@ -136,3 +142,15 @@ export default class Table extends Component<*, Props, State> {
         );
     }
 }
+
+/**
+ * A modified version of TestPopover for Jest/Enzyme tests.
+ * It always uses TableSimple which Enzyme is able to render correctly.
+ * TableInteractive uses react-virtualized library which requires a real browser viewport.
+ */
+export const TestTable = (props: Props) => <Table {...props} isDashboard={true} />
+TestTable.uiName = Table.uiName;
+TestTable.identifier = Table.identifier;
+TestTable.iconName = Table.iconName;
+TestTable.minSize = Table.minSize;
+TestTable.settings = Table.settings;

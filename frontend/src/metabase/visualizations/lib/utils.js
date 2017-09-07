@@ -11,6 +11,24 @@ import * as colors from "metabase/lib/colors";
 const SPLIT_AXIS_UNSPLIT_COST = -100;
 const SPLIT_AXIS_COST_FACTOR = 2;
 
+// NOTE Atte Keinänen 8/3/17: Moved from settings.js because this way we
+// are able to avoid circular dependency errors in integrated tests
+export function columnsAreValid(colNames, data, filter = () => true) {
+    if (typeof colNames === "string") {
+        colNames = [colNames]
+    }
+    if (!data || !Array.isArray(colNames)) {
+        return false;
+    }
+    const colsByName = {};
+    for (const col of data.cols) {
+        colsByName[col.name] = col;
+    }
+    return colNames.reduce((acc, name) =>
+        acc && (name == undefined || (colsByName[name] && filter(colsByName[name])))
+        , true);
+}
+
 // computed size properties (drop 'px' and convert string -> Number)
 function getComputedSizeProperty(prop, element) {
     var val = document.defaultView.getComputedStyle(element, null).getPropertyValue(prop);
@@ -116,10 +134,15 @@ export function getXValues(datas, chartType) {
     return xValues;
 }
 
-export function getFriendlyName(col) {
-    let name = col.display_name || col.name;
-    let friendlyName = FRIENDLY_NAME_MAP[name.toLowerCase().trim()];
-    return friendlyName || name;
+export function getFriendlyName(column) {
+    if (column.display_name && column.display_name !== column.name) {
+        return column.display_name
+    } else {
+        // NOTE Atte Keinänen 8/7/17:
+        // Values `display_name` and `name` are same for breakout columns so check FRIENDLY_NAME_MAP
+        // before returning either `display_name` or `name`
+        return FRIENDLY_NAME_MAP[column.name.toLowerCase().trim()] || column.display_name || column.name;
+    }
 }
 
 export function getCardColors(card) {
@@ -277,4 +300,3 @@ export function getCardAfterVisualizationClick(nextCard, previousCard) {
         };
     }
 }
-

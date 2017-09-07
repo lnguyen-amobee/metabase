@@ -31,9 +31,9 @@ const PERCENT_REGEX = /percent/i;
 
 import type { VisualizationProps } from "metabase/meta/types/Visualization";
 
-type Props = VisualizationProps;
+export default class PieChart extends Component {
+    props: VisualizationProps;
 
-export default class PieChart extends Component<*, Props, *> {
     static uiName = "Pie";
     static identifier = "pie";
     static iconName = "pie";
@@ -46,7 +46,7 @@ export default class PieChart extends Component<*, Props, *> {
 
     static checkRenderable([{ data: { cols, rows} }], settings) {
         if (!settings["pie.dimension"] || !settings["pie.metric"]) {
-            throw new ChartSettingsError("Which columns do want to use?", "Data");
+            throw new ChartSettingsError("Which columns do you want to use?", "Data");
         }
     }
 

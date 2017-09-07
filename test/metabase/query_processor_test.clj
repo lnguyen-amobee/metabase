@@ -8,7 +8,8 @@
              [driver :as driver]
              [util :as u]]
             [metabase.test.data :as data]
-            [metabase.test.data.datasets :as datasets]))
+            [metabase.test.data.datasets :as datasets]
+            [medley.core :as m]))
 
 ;; make sure all the driver test extension namespaces are loaded <3
 ;; if this isn't done some things will get loaded at the wrong time which can end up causing test databases to be created more than once, which fails
@@ -90,11 +91,13 @@
    :visibility_type :normal
    :schema_name     (data/default-schema)
    :source          :fields
-   :fk_field_id     nil})
+   :fk_field_id     nil
+   :remapped_from   nil
+   :remapped_to     nil})
 
 (defn- target-field [field]
   (when (data/fks-supported?)
-    (dissoc field :target :extra_info :schema_name :source :fk_field_id)))
+    (dissoc field :target :extra_info :schema_name :source :fk_field_id :remapped_from :remapped_to)))
 
 (defn categories-col
   "Return column information for the `categories` column named by keyword COL."
@@ -230,36 +233,44 @@
   {:arglists '([ag-col-kw] [ag-col-kw field])}
   ([ag-col-kw]
    (case ag-col-kw
-     :count  {:base_type    :type/Integer
-              :special_type :type/Number
-              :name         "count"
-              :display_name "count"
-              :id           nil
-              :table_id     nil
-              :description  nil
-              :source       :aggregation
-              :extra_info   {}
-              :target       nil}))
+     :count  {:base_type       :type/Integer
+              :special_type    :type/Number
+              :name            "count"
+              :display_name    "count"
+              :id              nil
+              :table_id        nil
+              :description     nil
+              :source          :aggregation
+              :extra_info      {}
+              :target          nil
+              :remapped_from   nil
+              :remapped_to     nil}))
   ([ag-col-kw {:keys [base_type special_type]}]
    {:pre [base_type special_type]}
    {:base_type    base_type
-    :special_type special_type
-    :id           nil
-    :table_id     nil
-    :description  nil
-    :source       :aggregation
-    :extra_info   {}
-    :target       nil
-    :name         (name ag-col-kw)
-    :display_name (name ag-col-kw)}))
+    :special_type  special_type
+    :id            nil
+    :table_id      nil
+    :description   nil
+    :source        :aggregation
+    :extra_info    {}
+    :target        nil
+    :name          (name ag-col-kw)
+    :display_name  (name ag-col-kw)
+    :remapped_from nil
+    :remapped_to   nil}))
 
 (defn breakout-col [column]
   (assoc column :source :breakout))
 
+;; TODO - maybe this needs a new name now that it also removes the results_metadata
 (defn booleanize-native-form
-  "Convert `:native_form` attribute to a boolean to make test results comparisons easier."
+  "Convert `:native_form` attribute to a boolean to make test results comparisons easier.
+   Remove `data.results_metadata` as well since it just takes a lot of space and the checksum can vary based on whether encryption is enabled."
   [m]
-  (update-in m [:data :native_form] boolean))
+  (-> m
+      (update-in [:data :native_form] boolean)
+      (m/dissoc-in [:data :results_metadata])))
 
 (defn format-rows-by
   "Format the values in result ROWS with the fns at the corresponding indecies in FORMAT-FNS.
@@ -285,7 +296,9 @@
                                          (printf "(%s %s) failed: %s" f v (.getMessage e))
                                          (throw e)))))))))))
 
-(def formatted-venues-rows (partial format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int]))
+(def ^{:arglists '([results])} formatted-venues-rows
+  "Helper function to format the rows in RESULTS when running a 'raw data' query against the Venues test table."
+  (partial format-rows-by [int str int (partial u/round-to-decimals 4) (partial u/round-to-decimals 4) int]))
 
 
 (defn rows

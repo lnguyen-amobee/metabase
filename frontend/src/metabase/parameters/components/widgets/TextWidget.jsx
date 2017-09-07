@@ -1,6 +1,10 @@
 /* eslint "react/prop-types": "warn" */
 import React, { Component } from "react";
+import ReactDOM from "react-dom";
 import PropTypes from "prop-types";
+import {forceRedraw} from "metabase/lib/dom";
+
+import { KEYCODE_ENTER, KEYCODE_ESCAPE } from "metabase/lib/keyboard";
 
 export default class TextWidget extends Component {
     constructor(props, context) {
@@ -31,7 +35,10 @@ export default class TextWidget extends Component {
 
     componentWillReceiveProps(nextProps) {
         if (this.props.value !== nextProps.value) {
-            this.setState({ value: nextProps.value });
+            this.setState({ value: nextProps.value }, () => {
+                // HACK: Address Safari rendering bug which causes https://github.com/metabase/metabase/issues/5335
+                forceRedraw(ReactDOM.findDOMNode(this));
+            });
         }
     }
 
@@ -56,9 +63,9 @@ export default class TextWidget extends Component {
                     }
                 }}
                 onKeyUp={(e) => {
-                    if (e.keyCode === 27) {
+                    if (e.keyCode === KEYCODE_ESCAPE) {
                         e.target.blur();
-                    } else if (e.keyCode === 13) {
+                    } else if (e.keyCode === KEYCODE_ENTER) {
                         setValue(this.state.value || null);
                         e.target.blur();
                     }

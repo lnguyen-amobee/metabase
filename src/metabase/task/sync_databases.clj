@@ -19,6 +19,7 @@
 (defonce ^:private sync-databases-trigger (atom nil))
 
 ;; simple job which looks up all databases and runs a sync on them
+;; simple job which looks up all databases and runs a sync on them
 (jobs/defjob SyncDatabases [_]
   (doseq [database (db/select Database, :is_sample false)] ; skip Sample Dataset DB
     (try

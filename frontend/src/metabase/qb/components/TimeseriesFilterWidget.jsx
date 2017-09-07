@@ -24,17 +24,17 @@ import _ from "underscore";
 
 import type {
     Card as CardObject,
-    DatasetQuery
+    StructuredDatasetQuery
 } from "metabase/meta/types/Card";
 import type { TableMetadata } from "metabase/meta/types/Metadata";
 import type { FieldFilter } from "metabase/meta/types/Query";
 
 type Props = {
-    className: string,
+    className?: string,
     card: CardObject,
     tableMetadata: TableMetadata,
     setDatasetQuery: (
-        datasetQuery: DatasetQuery,
+        datasetQuery: StructuredDatasetQuery,
         options: { run: boolean }
     ) => void
 };
@@ -45,8 +45,10 @@ type State = {
     currentFilter: any
 };
 
-export default class TimeseriesFilterWidget extends Component<*, Props, State> {
-    state = {
+export default class TimeseriesFilterWidget extends Component {
+    props: Props;
+    state: State = {
+        // $FlowFixMe
         filter: null,
         filterIndex: -1,
         currentFilter: null
@@ -104,6 +106,10 @@ export default class TimeseriesFilterWidget extends Component<*, Props, State> {
                 currentDescription = "After " + currentDescription;
             } else if (currentFilter[0] === "<") {
                 currentDescription = "Before " + currentDescription;
+            } else if (currentFilter[0] === "IS_NULL") {
+                currentDescription = "Is Empty";
+            } else if (currentFilter[0] === "NOT_NULL") {
+                currentDescription = "Not Empty";
             }
         } else {
             currentDescription = "All Time";
@@ -144,8 +150,7 @@ export default class TimeseriesFilterWidget extends Component<*, Props, State> {
                                 } else {
                                     query = Query.addFilter(query, filter);
                                 }
-                                // $FlowFixMe
-                                const datasetQuery: DatasetQuery = {
+                                const datasetQuery: StructuredDatasetQuery = {
                                     ...card.dataset_query,
                                     query
                                 };

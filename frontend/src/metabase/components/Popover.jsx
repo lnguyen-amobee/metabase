@@ -100,7 +100,7 @@ export default class Popover extends Component {
                 >
                     { typeof this.props.children === "function" ?
                         this.props.children()
-                    :
+                        :
                         this.props.children
                     }
                 </div>
@@ -173,7 +173,7 @@ export default class Popover extends Component {
                 >
                     {this._popoverComponent()}
                 </ReactCSSTransitionGroup>
-            , popoverElement);
+                , popoverElement);
 
             var tetherOptions = {};
 
@@ -271,3 +271,25 @@ export default class Popover extends Component {
         return <span className="hide" />;
     }
 }
+
+/**
+ * A modified version of TestPopover for Jest/Enzyme tests.
+ * Simply renders the popover body inline instead of mutating DOM root.
+ */
+export const TestPopover = (props) =>
+    (props.isOpen === undefined || props.isOpen) ?
+        <div
+            id={props.id}
+            className={cx("TestPopover TestPopoverBody", props.className)}
+            style={props.style}
+            // because popover is normally directly attached to body element, other elements should not need
+            // to care about clicks that happen inside the popover
+            onClick={ (e) => { e.stopPropagation(); } }
+        >
+            { typeof props.children === "function" ?
+                props.children()
+                :
+                props.children
+            }
+        </div>
+        : null

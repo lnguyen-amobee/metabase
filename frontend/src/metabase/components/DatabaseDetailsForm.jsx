@@ -48,7 +48,8 @@ export default class DatabaseDetailsForm extends Component {
         formError: PropTypes.object,
         hiddenFields: PropTypes.object,
         submitButtonText: PropTypes.string.isRequired,
-        submitFn: PropTypes.func.isRequired
+        submitFn: PropTypes.func.isRequired,
+        submitting: PropTypes.boolean
     };
 
     validateForm() {
@@ -165,7 +166,7 @@ export default class DatabaseDetailsForm extends Component {
                             <div style={{maxWidth: "40rem"}} className="pt1">
                                  Some database installations can only be accessed by connecting through an SSH bastion host.
                                  This option also provides an extra layer of security when a VPN is not available.
-                                 Enabling this is usually slower than a dirrect connection.
+                                 Enabling this is usually slower than a direct connection.
                             </div>
                         </div>
                     </div>
@@ -250,7 +251,7 @@ export default class DatabaseDetailsForm extends Component {
     }
 
     render() {
-        let { engine, engines, formError, formSuccess, hiddenFields, submitButtonText } = this.props;
+        let { engine, engines, formError, formSuccess, hiddenFields, submitButtonText, submitting } = this.props;
         let { valid } = this.state;
 
         let fields = [
@@ -278,8 +279,8 @@ export default class DatabaseDetailsForm extends Component {
                 </div>
 
                 <div className="Form-actions">
-                    <button className={cx("Button", {"Button--primary": valid})} disabled={!valid}>
-                        {submitButtonText}
+                    <button className={cx("Button", {"Button--primary": valid})} disabled={!valid || submitting}>
+                        {submitting ? "Saving..." : submitButtonText}
                     </button>
                     <FormMessage formError={formError} formSuccess={formSuccess}></FormMessage>
                 </div>

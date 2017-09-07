@@ -22,7 +22,7 @@ type State = {
     expanded: bool
 };
 
-export default class OperatorSelector extends Component<*, Props, State> {
+export default class OperatorSelector extends Component {
     props: Props;
     state: State;
 
@@ -74,7 +74,7 @@ export default class OperatorSelector extends Component<*, Props, State> {
                     </button>
                 )}
                 { !expanded && expandedOperators.length > 0 ?
-                    <div className="text-grey-3 cursor-pointer" onClick={this.expandOperators}>
+                    <div className="text-grey-3 text-purple-hover transition-color cursor-pointer" onClick={this.expandOperators}>
                         <Icon className="px1" name="chevrondown" size={14} />
                         More Options
                     </div>
