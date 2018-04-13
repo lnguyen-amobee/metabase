@@ -312,6 +312,13 @@
            {:name   table-name
             :schema schema}))))
 
+(defn- remove-partitions
+  "Iterate through a list of table maps and see if current table is a partition, if so remove"
+  [table]
+  (let [table-name (get table :name)]
+         ;;; read from file
+       (nil? (re-find #"_[0-9]+" table-name))))
+
 (defn post-filtered-active-tables
   "Alternative implementation of `ISQLDriver/active-tables` best suited for DBs with little or no support for schemas.
    Fetch *all* Tables, then filter out ones whose schema is in `excluded-schemas` Clojure-side."
@@ -362,7 +369,9 @@
    metadata."
   [driver database]
   (with-metadata [metadata driver database]
-    {:tables (active-tables driver, ^DatabaseMetaData metadata)}))
+                 (let [tables (fast-active-tables driver, ^DatabaseMetaData metadata)
+                       clean-tables (set (filter remove-partitions tables))]
+                  {:tables clean-tables})))
 
 (defn describe-table
   "Default implementation of `describe-table` for JDBC-based drivers. Uses various `ISQLDriver` methods and JDBC
