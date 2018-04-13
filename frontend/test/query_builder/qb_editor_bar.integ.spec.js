@@ -29,6 +29,7 @@ import FilterPopover from "metabase/query_builder/components/filters/FilterPopov
 import FilterWidget from "metabase/query_builder/components/filters/FilterWidget";
 import FieldName from "metabase/query_builder/components/FieldName";
 import RunButton from "metabase/query_builder/components/RunButton";
+import { Option } from "metabase/components/Select";
 
 import OperatorSelector from "metabase/query_builder/components/filters/OperatorSelector";
 import BreakoutWidget from "metabase/query_builder/components/BreakoutWidget";
@@ -152,12 +153,12 @@ describe("QueryBuilder editor bar", () => {
     it("lets you see a correct number of operators in filter popover", () => {
       const filterPopover = qb.find(FilterPopover);
 
-      const optionsIcon = filterPopover.find(`a[children="Options"]`);
-
-      click(optionsIcon);
-
+      // const optionsIcon = filterPopover.find(`a[children="Options"]`);
       const operatorSelector = filterPopover.find(OperatorSelector);
-      expect(operatorSelector.find("button").length).toBe(9);
+
+      click(operatorSelector);
+
+      expect(operatorSelector.find(Option).length).toBe(9);
     });
 
     it("lets you set 'ID is 10' filter", async () => {
@@ -183,9 +184,9 @@ describe("QueryBuilder editor bar", () => {
       click(filterWidget.find(FieldName));
 
       const filterPopover = qb.find(FilterPopover);
-      click(filterPopover.find(`a[children="Options"]`));
       const operatorSelector = filterPopover.find(OperatorSelector);
-      clickButton(operatorSelector.find('button[children="Between"]'));
+      click(operatorSelector);
+      clickButton(operatorSelector.find('[children="Between"]'));
 
       const betweenInputs = filterPopover.find("input");
       expect(betweenInputs.length).toBe(2);
@@ -237,13 +238,13 @@ describe("QueryBuilder editor bar", () => {
       await store.waitForActions([QUERY_COMPLETED]);
 
       // We can use the visible row count as we have a low number of result rows
-      expect(qb.find(".ShownRowCount").text()).toBe("Showing 14 rows");
+      expect(qb.find(".ShownRowCount").text()).toBe("Showing 6 rows");
 
       // Get the binning
       const results = getQueryResults(store.getState())[0];
       const breakoutBinningInfo = results.data.cols[0].binning_info;
       expect(breakoutBinningInfo.binning_strategy).toBe("num-bins");
-      expect(breakoutBinningInfo.bin_width).toBe(20);
+      expect(breakoutBinningInfo.bin_width).toBe(50);
       expect(breakoutBinningInfo.num_bins).toBe(8);
     });
     it("lets you change the binning strategy to 100 bins", async () => {
@@ -271,11 +272,11 @@ describe("QueryBuilder editor bar", () => {
       click(qb.find(RunButton));
       await store.waitForActions([QUERY_COMPLETED]);
 
-      expect(qb.find(".ShownRowCount").text()).toBe("Showing 253 rows");
+      expect(qb.find(".ShownRowCount").text()).toBe("Showing 105 rows");
       const results = getQueryResults(store.getState())[0];
       const breakoutBinningInfo = results.data.cols[0].binning_info;
       expect(breakoutBinningInfo.binning_strategy).toBe("num-bins");
-      expect(breakoutBinningInfo.bin_width).toBe(1);
+      expect(breakoutBinningInfo.bin_width).toBe(2.5);
       expect(breakoutBinningInfo.num_bins).toBe(100);
     });
     it("lets you disable the binning", async () => {

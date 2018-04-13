@@ -1,6 +1,7 @@
 /* @flow */
 
 import React, { Component } from "react";
+import ReactDOM from "react-dom";
 
 import { t } from "c-3po";
 
@@ -24,27 +25,34 @@ type Props = {
 type State = {
   value: any[],
   isFocused: boolean,
+  widgetWidth: ?number,
 };
+
+const BORDER_WIDTH = 2;
+
+const normalizeValue = value =>
+  Array.isArray(value) ? value : value != null ? [value] : [];
 
 // TODO: rename this something else since we're using it for more than searching and more than text
 export default class ParameterFieldWidget extends Component<*, Props, State> {
   props: Props;
   state: State;
 
+  _unfocusedElement: React$Component<any, any, any>;
+
   constructor(props: Props) {
     super(props);
     this.state = {
       isFocused: false,
       value: props.value,
+      widgetWidth: null,
     };
   }
 
   static noPopover = true;
 
   static format(value, field) {
-    if (!Array.isArray(value)) {
-      value = [value];
-    }
+    value = normalizeValue(value);
     if (value.length > 1) {
       return `${value.length} selections`;
     } else {
@@ -58,13 +66,22 @@ export default class ParameterFieldWidget extends Component<*, Props, State> {
     }
   }
 
+  componentDidUpdate() {
+    let element = ReactDOM.findDOMNode(this._unfocusedElement);
+    if (!this.state.isFocused && element) {
+      const parameterWidgetElement = element.parentNode.parentNode.parentNode;
+      if (parameterWidgetElement.clientWidth !== this.state.widgetWidth) {
+        this.setState({ widgetWidth: parameterWidgetElement.clientWidth });
+      }
+    }
+  }
+
   render() {
     let { setValue, isEditing, field, parentFocusChanged } = this.props;
-    let { value, isFocused } = this.state;
+    let { isFocused } = this.state;
 
-    if (!Array.isArray(value)) {
-      value = value != null ? [value] : [];
-    }
+    const savedValue = normalizeValue(this.props.value);
+    const unsavedValue = normalizeValue(this.state.value);
 
     const defaultPlaceholder = isFocused
       ? ""
@@ -81,9 +98,13 @@ export default class ParameterFieldWidget extends Component<*, Props, State> {
 
     if (!isFocused) {
       return (
-        <div className="flex-full" onClick={() => focusChanged(true)}>
-          {value.length > 0 ? (
-            ParameterFieldWidget.format(value, field)
+        <div
+          ref={_ => (this._unfocusedElement = _)}
+          className="flex-full cursor-pointer"
+          onClick={() => focusChanged(true)}
+        >
+          {savedValue.length > 0 ? (
+            ParameterFieldWidget.format(savedValue, field)
           ) : (
             <span>{placeholder}</span>
           )}
@@ -92,16 +113,17 @@ export default class ParameterFieldWidget extends Component<*, Props, State> {
     } else {
       return (
         <Popover
-          tetherOptions={{
-            attachment: "top left",
-            targetAttachment: "top left",
-            targetOffset: "-15 -25",
-          }}
+          horizontalAttachments={["left", "right"]}
+          verticalAttachments={["top"]}
+          alignHorizontalEdge
+          alignVerticalEdge
+          targetOffsetY={-19}
+          targetOffsetX={33}
           hasArrow={false}
           onClose={() => focusChanged(false)}
         >
           <FieldValuesWidget
-            value={value}
+            value={unsavedValue}
             onChange={value => {
               this.setState({ value });
             }}
@@ -112,37 +134,30 @@ export default class ParameterFieldWidget extends Component<*, Props, State> {
             autoFocus
             color="brand"
             style={{
-              borderWidth: 2,
-              minWidth: 182,
+              borderWidth: BORDER_WIDTH,
+              minWidth: this.state.widgetWidth
+                ? this.state.widgetWidth + BORDER_WIDTH * 2
+                : null,
             }}
+            minWidth={400}
+            maxWidth={400}
           />
+          {/* border between input and footer comes from border-bottom on FieldValuesWidget */}
           <div className="flex p1">
             <Button
               primary
               className="ml-auto"
+              disabled={savedValue.length === 0 && unsavedValue.length === 0}
               onClick={() => {
-                setValue(value.length > 0 ? value : null);
+                setValue(unsavedValue.length > 0 ? unsavedValue : null);
                 focusChanged(false);
               }}
             >
-              Done
+              {savedValue.length > 0 ? "Update filter" : "Add filter"}
             </Button>
           </div>
         </Popover>
       );
-      // return (
-      //     <FieldSearchInput
-      //         value={value}
-      //         onChange={setValue}
-      //         isFocused={isFocused}
-      //         onFocus={() => focusChanged(true)}
-      //         onBlur={() => focusChanged(false)}
-      //         autoFocus={this.state.isFocused}
-      //         placeholder={isEditing ? "Enter a default value..." : defaultPlaceholder}
-      //         field={field}
-      //         searchField={field && field.parameterSearchField()}
-      //     />
-      // )
     }
   }
 }

@@ -4,6 +4,7 @@
              [set :as set]]
             [clojure.tools.logging :as log]
             [metabase
+             [events :as events]
              [public-settings :as public-settings]
              [util :as u]]
             [metabase.models
@@ -13,6 +14,8 @@
              [interface :as i]
              [params :as params]
              [revision :as revision]]
+            [metabase.query-processor :as qp]
+            [metabase.query-processor.interface :as qpi]
             [metabase.models.revision.diff :refer [build-sentence]]
             [toucan
              [db :as db]
@@ -226,3 +229,40 @@
         (dashboard-card/update-dashboard-card! (update dashboard-card :series #(filter identity (map :id %))))))
     (let [new-param-field-ids (dashboard-id->param-field-ids dashboard-or-id)]
       (update-field-values-for-on-demand-dbs! dashboard-or-id old-param-field-ids new-param-field-ids))))
+
+
+(defn- result-metadata-for-query
+  "Fetch the results metadata for a QUERY by running the query and seeing what the QP gives us in return."
+  [query]
+  (binding [qpi/*disable-qp-logging* true]
+    (get-in (qp/process-query query) [:data :results_metadata :columns])))
+
+(defn- save-card!
+  [card]
+  (when (:dataset_query card)
+    (db/insert! 'Card
+      (-> card
+          (update :result_metadata #(or % (-> card
+                                              :dataset_query
+                                              result-metadata-for-query)))
+          (dissoc :id)))))
+
+(defn save-transient-dashboard!
+  "Save a denormalized description of dashboard."
+  [dashboard]
+  (let [dashcards (:ordered_cards dashboard)
+        dashboard (db/insert! Dashboard
+                    (dissoc dashboard :ordered_cards :rule :related))]
+    (doseq [dashcard dashcards]
+      (let [card     (some->> dashcard :card save-card!)
+            series   (some->> dashcard :series (map save-card!))
+            dashcard (-> dashcard
+                         (dissoc :card :id :card_id)
+                         (update :parameter_mappings
+                                 (partial map #(assoc % :card_id (:id card))))
+                         (assoc :series series))]
+        (doseq [card (concat series (some-> card vector))]
+          (events/publish-event! :card-create card)
+          (hydrate card :creator :dashboard_count :labels :can_write :collection))
+        (add-dashcard! dashboard card dashcard)))
+    dashboard))
