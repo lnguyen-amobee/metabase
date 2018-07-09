@@ -1,27 +1,20 @@
 (ns metabase.driver.mongo
   "MongoDB Driver."
   (:require [cheshire.core :as json]
-            [clojure.string :as str]
             [clojure.tools.logging :as log]
             [metabase
              [driver :as driver]
              [util :as u]]
             [metabase.driver.mongo
              [query-processor :as qp]
-             [util :refer [*mongo-connection* with-mongo-connection]]]
-            [metabase.models
-             [database :refer [Database]]
-             [field :as field]]
-            [metabase.sync.interface :as si]
-            [metabase.util
-             [schema :as su]
-             [ssh :as ssh]]
+             [util :refer [with-mongo-connection]]]
+            [metabase.models.database :refer [Database]]
+            [metabase.util.ssh :as ssh]
             [monger
              [collection :as mc]
              [command :as cmd]
              [conversion :as conv]
-             [db :as mdb]
-             [query :as mq]]
+             [db :as mdb]]
             [schema.core :as s]
             [toucan.db :as db])
   (:import com.mongodb.DB))
@@ -57,7 +50,7 @@
 
 (defn- process-query-in-context [qp]
   (fn [{database-id :database, :as query}]
-    (with-mongo-connection [^DB conn, (db/select-one [Database :details], :id database-id)]
+    (with-mongo-connection [_ (db/select-one [Database :details], :id database-id)]
       (qp query))))
 
 
@@ -73,14 +66,17 @@
   (cond
     ;; 1. url?
     (and (string? field-value)
-         (u/url? field-value)) :type/URL
+         (u/url? field-value))
+    :type/URL
+
     ;; 2. json?
     (and (string? field-value)
          (or (.startsWith "{" field-value)
-             (.startsWith "[" field-value))) (when-let [j (u/try-apply json/parse-string field-value)]
-                                               (when (or (map? j)
-                                                         (sequential? j))
-                                                 :type/SerializedJSON))))
+             (.startsWith "[" field-value)))
+    (when-let [j (u/ignore-exceptions (json/parse-string field-value))]
+      (when (or (map? j)
+                (sequential? j))
+        :type/SerializedJSON))))
 
 (defn- find-nested-fields [field-value nested-fields]
   (loop [[k & more-keys] (keys field-value)
@@ -166,6 +162,7 @@
 
 
 (defrecord MongoDriver []
+  :load-ns true
   clojure.lang.Named
   (getName [_] "MongoDB"))
 

@@ -4,22 +4,26 @@ import Question from "metabase-lib/lib/Question";
 
 // provides functions for building urls to things we care about
 
+export const activity = "/activity";
+
 export const newQuestion = () => "/question/new";
+
+export const newDashboard = collectionId =>
+  `collection/${collectionId}/new_dashboard`;
+
+export const newPulse = collectionId =>
+  `/pulse/create?collectionId=${collectionId}`;
+
+export const newCollection = collectionId =>
+  `collection/${collectionId}/new_collection`;
+
 export function question(cardId, hash = "", query = "") {
   if (hash && typeof hash === "object") {
     hash = serializeCardForUrl(hash);
   }
   if (query && typeof query === "object") {
-    query = Object.entries(query)
-      .map(kv => {
-        if (Array.isArray(kv[1])) {
-          return kv[1]
-            .map(v => `${encodeURIComponent(kv[0])}=${encodeURIComponent(v)}`)
-            .join("&");
-        } else {
-          return kv.map(encodeURIComponent).join("=");
-        }
-      })
+    query = extractQueryParams(query)
+      .map(kv => kv.map(encodeURIComponent).join("="))
       .join("&");
   }
   if (hash && hash.charAt(0) !== "#") {
@@ -34,13 +38,26 @@ export function question(cardId, hash = "", query = "") {
     : `/question${query}${hash}`;
 }
 
+export const extractQueryParams = (query: Object): Array => {
+  return [].concat(...Object.entries(query).map(flattenParam));
+};
+
+const flattenParam = ([key, value]) => {
+  if (value instanceof Array) {
+    return value.map(p => [key, p]);
+  }
+  return [[key, value]];
+};
+
 export function plainQuestion() {
   return Question.create({ metadata: null }).getUrl();
 }
 
 export function dashboard(dashboardId, { addCardWithId } = {}) {
   return addCardWithId != null
-    ? `/dashboard/${dashboardId}#add=${addCardWithId}`
+    ? // NOTE: no-color-literals rule thinks #add is a color, oops
+      // eslint-disable-next-line no-color-literals
+      `/dashboard/${dashboardId}#add=${addCardWithId}`
     : `/dashboard/${dashboardId}`;
 }
 
@@ -61,6 +78,10 @@ export function pulse(pulseId) {
   return `/pulse/#${pulseId}`;
 }
 
+export function pulseEdit(pulseId) {
+  return `/pulse/${pulseId}`;
+}
+
 export function tableRowsQuery(databaseId, tableId, metricId, segmentId) {
   let query = `?db=${databaseId}&table=${tableId}`;
 
@@ -75,8 +96,8 @@ export function tableRowsQuery(databaseId, tableId, metricId, segmentId) {
   return question(null, query);
 }
 
-export function collection(collection) {
-  return `/questions/collections/${collection.slug}`;
+export function collection(collectionId) {
+  return `/collection/${collectionId || "root"}`;
 }
 
 export function label(label) {
@@ -99,4 +120,12 @@ export function embedCard(token, type = null) {
 
 export function embedDashboard(token) {
   return `/embed/dashboard/${token}`;
+}
+
+export function userCollection(userCollectionId) {
+  return `/collection/${userCollectionId}/`;
+}
+
+export function accountSettings() {
+  return `/user/edit_current`;
 }

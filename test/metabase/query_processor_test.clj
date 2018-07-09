@@ -9,7 +9,8 @@
              [driver :as driver]
              [util :as u]]
             [metabase.test.data :as data]
-            [metabase.test.data.datasets :as datasets]))
+            [metabase.test.data.datasets :as datasets]
+            [metabase.util.date :as du]))
 
 ;; make sure all the driver test extension namespaces are loaded <3 if this isn't done some things will get loaded at
 ;; the wrong time which can end up causing test databases to be created more than once, which fails
@@ -313,7 +314,8 @@
    (format-rows-by format-fns (not :format-nil-values?) rows))
   ([format-fns format-nil-values? rows]
    (cond
-     (= (:status rows) :failed) (throw (ex-info (:error rows) rows))
+     (= (:status rows) :failed) (do (println "Error running query:" (u/pprint-to-str 'red rows))
+                                    (throw (ex-info (:error rows) rows)))
 
      (:data rows) (update-in rows [:data :rows] (partial format-rows-by format-fns))
      (:rows rows) (update    rows :rows         (partial format-rows-by format-fns))
@@ -358,3 +360,13 @@
       driver/engine->driver
       driver/features
       (contains? :set-timezone)))
+
+(defmacro with-h2-db-timezone
+  "This macro is useful when testing pieces of the query pipeline (such as expand) where it's a basic unit test not
+  involving a database, but does need to parse dates"
+  [& body]
+  `(du/with-effective-timezone {:engine   :h2
+                                :timezone "UTC"
+                                :name     "mock_db"
+                                :id       1}
+    ~@body))

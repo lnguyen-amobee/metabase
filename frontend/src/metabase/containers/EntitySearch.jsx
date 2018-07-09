@@ -16,6 +16,8 @@ import { KEYCODE_DOWN, KEYCODE_ENTER, KEYCODE_UP } from "metabase/lib/keyboard";
 import { LocationDescriptor } from "metabase/meta/types/index";
 import { parseHashOptions, updateQueryString } from "metabase/lib/browser";
 
+import colors from "metabase/lib/colors";
+
 const PAGE_SIZE = 10;
 
 const SEARCH_GROUPINGS = [
@@ -237,7 +239,7 @@ export default class EntitySearch extends Component {
                       <p className="text-grey-4">{t`Try adjusting your filter to find what you’re looking for.`}</p>
                     </div>
                   }
-                  image="/app/img/empty_question"
+                  image="app/img/empty_question"
                   imageHeight="213px"
                   imageClassName="mln2"
                   smallDescription
@@ -448,7 +450,11 @@ export const SearchResultsGroup = ({
   <div>
     {groupName !== null && (
       <div className="flex align-center bg-slate-almost-extra-light bordered mt3 px3 py2">
-        <Icon className="mr1" style={{ color: "#BCC5CA" }} name={groupIcon} />
+        <Icon
+          className="mr1"
+          style={{ color: colors["text-light"] }}
+          name={groupIcon}
+        />
         <h4>{groupName}</h4>
       </div>
     )}

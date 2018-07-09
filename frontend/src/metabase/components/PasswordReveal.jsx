@@ -2,6 +2,7 @@
 import React, { Component } from "react";
 import CopyButton from "metabase/components/CopyButton";
 import { t } from "c-3po";
+import colors from "metabase/lib/colors";
 
 type State = {
   visible: boolean,
@@ -15,7 +16,7 @@ const styles = {
   input: {
     fontSize: "1.2rem",
     letterSpacing: "2",
-    color: "#676C72",
+    color: colors["text-dark"],
     outline: "none",
   },
 };
@@ -39,7 +40,7 @@ export default class PasswordReveal extends Component {
     return (
       <div
         style={{ borderWidth: 2 }}
-        className="bordered rounded flex align-center  p3 relative"
+        className="bordered rounded flex align-center p3 relative"
       >
         <Label />
 

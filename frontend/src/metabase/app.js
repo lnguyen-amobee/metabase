@@ -7,6 +7,8 @@ import "number-to-locale-string";
 // strings/elements to assist in finding untranslated strings.
 import "metabase/lib/i18n-debug";
 
+import "metabase/lib/colors";
+
 // make the i18n function "t" global so we don't have to import it in basically every file
 import { t, jt } from "c-3po";
 global.t = t;
@@ -21,6 +23,7 @@ if (window.MetabaseLocalization) {
 import React from "react";
 import ReactDOM from "react-dom";
 import { Provider } from "react-redux";
+import { ThemeProvider } from "styled-components";
 
 import MetabaseAnalytics, {
   registerAnalyticsClickListener,
@@ -33,9 +36,14 @@ import { getStore } from "./store";
 
 import { refreshSiteSettings } from "metabase/redux/settings";
 
+// router
 import { Router, useRouterHistory } from "react-router";
 import { createHistory } from "history";
 import { syncHistoryWithStore } from "react-router-redux";
+
+// drag and drop
+import HTML5Backend from "react-dnd-html5-backend";
+import { DragDropContextProvider } from "react-dnd";
 
 // remove trailing slash
 const BASENAME = window.MetabaseRoot.replace(/\/+$/, "");
@@ -46,6 +54,10 @@ const browserHistory = useRouterHistory(createHistory)({
   basename: BASENAME,
 });
 
+const theme = {
+  space: [4, 8, 16, 32, 64, 128],
+};
+
 function _init(reducers, getRoutes, callback) {
   const store = getStore(reducers, browserHistory);
   const routes = getRoutes(store);
@@ -53,7 +65,11 @@ function _init(reducers, getRoutes, callback) {
 
   ReactDOM.render(
     <Provider store={store}>
-      <Router history={history}>{routes}</Router>
+      <DragDropContextProvider backend={HTML5Backend} context={{ window }}>
+        <ThemeProvider theme={theme}>
+          <Router history={history}>{routes}</Router>
+        </ThemeProvider>
+      </DragDropContextProvider>
     </Provider>,
     document.getElementById("root"),
   );
@@ -73,6 +89,9 @@ function _init(reducers, getRoutes, callback) {
       "ga-disable-" + MetabaseSettings.get("ga_code")
     ] = MetabaseSettings.isTrackingEnabled() ? null : true;
   });
+
+  window.Metabase = window.Metabase || {};
+  window.Metabase.store = store;
 
   if (callback) {
     callback(store);
